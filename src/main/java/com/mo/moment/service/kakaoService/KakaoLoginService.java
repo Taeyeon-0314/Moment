@@ -1,5 +1,6 @@
 package com.mo.moment.service.kakaoService;
 
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,7 +9,7 @@ import com.mo.moment.dto.kakaoDto.KakaoAccountDto;
 import com.mo.moment.dto.kakaoDto.KakaoTokenDto;
 import com.mo.moment.dto.kakaoDto.LoginResponseDto;
 import com.mo.moment.entity.kakaoEntity.KakaoLoginEntity;
-import com.mo.moment.repository.kakaoRepository.KakaoRepository;
+import com.mo.moment.repository.kakaorepository.KakaoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -81,11 +82,10 @@ public class KakaoLoginService {
         loginResponseDto.setKakaoLoginEntity(kakaoLoginEntity);
 
         // 데이터베이스에서 해당 카카오 사용자 정보 조회
-        KakaoLoginEntity existOwner = kakaoRepository.findById(kakaoLoginEntity.getId()).orElse(null);
+        KakaoLoginEntity existOwner = kakaoRepository.findByKakaoId(kakaoLoginEntity.getKakaoId()).orElse(null);
         try {
             if (existOwner == null) {
                 System.out.println("처음 로그인 하는 회원입니다.");
-
                 // 데이터베이스에 새로운 회원으로 저장
                 kakaoRepository.save(kakaoLoginEntity);
             }
@@ -126,6 +126,7 @@ public class KakaoLoginService {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         KakaoAccountDto kakaoAccountDto = null;
         try {
+
             kakaoAccountDto = objectMapper.readValue(accountInfoResponse.getBody(), KakaoAccountDto.class);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
@@ -133,21 +134,23 @@ public class KakaoLoginService {
 
         // 회원가입 처리하기
         Long kakaoId = kakaoAccountDto.getId();
-        KakaoLoginEntity existOwner = kakaoRepository.findById(kakaoId).orElse(null);
+        KakaoLoginEntity existOwner = kakaoRepository.findByKakaoId(kakaoId).orElse(null);
         // 처음 로그인이 아닌 경우
         if (existOwner != null) {
             return KakaoLoginEntity.builder()
-                    .id(kakaoAccountDto.getId())
+                    .kakaoId(kakaoAccountDto.getId())
                     .email(kakaoAccountDto.getKakao_account().getEmail())
                     .kakaoName(kakaoAccountDto.getKakao_account().getProfile().getNickname())
+                    .profile_image(kakaoAccountDto.getKakao_account().getProfile().getProfile_image_url())
                     .build();
         }
         // 처음 로그인 하는 경우
         else {
             return KakaoLoginEntity.builder()
-                    .id(kakaoAccountDto.getId())
+                    .kakaoId(kakaoAccountDto.getId())
                     .email(kakaoAccountDto.getKakao_account().getEmail())
                     .kakaoName(kakaoAccountDto.getKakao_account().getProfile().getNickname())
+                    .profile_image(kakaoAccountDto.getKakao_account().getProfile().getProfile_image_url())
                     .build();
         }
     }
