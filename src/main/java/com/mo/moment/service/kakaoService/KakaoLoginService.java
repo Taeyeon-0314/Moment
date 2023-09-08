@@ -27,65 +27,82 @@ public class KakaoLoginService {
 
     private final KakaoRepository kakaoRepository;
 
+    // 카카오 Oauth2를 통해 액세스 토큰을 가져오는 메서드
     @Transactional
-    public KakaoTokenDto getKakaoAccessToken(String code){
+    public KakaoTokenDto getKakaoAccessToken(String code) {
 
+        // Http 요청 헤더 설정
         HttpHeaders headers = new HttpHeaders();
-        headers.add("Content-type" , "application/x-www-form-urlencoded;charset=utf-8");
+        headers.add("Content-type", "application/x-www-form-urlencoded;charset=utf-8");
 
+        // HTTP 요청 매개변수 생성
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", "authorization_code");
         params.add("client_id", "38f086bf0a00724a17a65858229e9333");
-        params.add("redirect_uri","http://localhost:8080/login/oauth2/callback/kakao");
-        params.add("code",code);
-        params.add("client_secret","Lzak9SeSUnexiSOSxcOdgf90kKU0oGzo");
+        params.add("redirect_uri", "http://localhost:8080/login/oauth2/callback/kakao");
+        params.add("code", code);
+        params.add("client_secret", "Lzak9SeSUnexiSOSxcOdgf90kKU0oGzo");
 
-        HttpEntity<MultiValueMap<String,String>> kakaoTokenRequest = new HttpEntity<>(params,headers);
+        // HTTP 요청 엔티티 생성
+        HttpEntity<MultiValueMap<String, String>> kakaoTokenRequest = new HttpEntity<>(params, headers);
 
+        // RestTemplate을 사용하여 카카오 서버에 액세스 토큰 요청을 보내고 응답을 받음
         RestTemplate rt = new RestTemplate();
-        ResponseEntity<String> accessTokenResponse  = rt.exchange(
+        ResponseEntity<String> accessTokenResponse = rt.exchange(
                 "https://kauth.kakao.com/oauth/token",
                 HttpMethod.POST,
                 kakaoTokenRequest,
                 String.class
         );
 
+        // JSON 응답 데이터를 KakaoTokenDto 객체로 역직렬화
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,false);
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         KakaoTokenDto kakaoTokenDto = null;
-        try{
-            kakaoTokenDto = objectMapper.readValue(accessTokenResponse.getBody(),KakaoTokenDto.class);
-        }catch (JsonProcessingException e){
+        try {
+            kakaoTokenDto = objectMapper.readValue(accessTokenResponse.getBody(), KakaoTokenDto.class);
+        } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
         return kakaoTokenDto;
     }
 
+    // 카카오 액세스 토큰을 사용하여 로그인 처리를 수행하는 메소드
     public ResponseEntity<LoginResponseDto> kakaoLogin(String kakaoAccessToken) {
+
+        // 카카오 사용자 정보 조회
         KakaoLoginEntity kakaoLoginEntity = getKakaoInfo(kakaoAccessToken);
         HttpHeaders headers = new HttpHeaders();
 
+        // 로그인 응답 데이터 생성
         LoginResponseDto loginResponseDto = new LoginResponseDto();
         loginResponseDto.setLoginSuccess(true);
         loginResponseDto.setKakaoLoginEntity(kakaoLoginEntity);
 
+        // 데이터베이스에서 해당 카카오 사용자 정보 조회
         KakaoLoginEntity existOwner = kakaoRepository.findById(kakaoLoginEntity.getId()).orElse(null);
         try {
             if (existOwner == null) {
                 System.out.println("처음 로그인 하는 회원입니다.");
+
+                // 데이터베이스에 새로운 회원으로 저장
                 kakaoRepository.save(kakaoLoginEntity);
             }
             loginResponseDto.setLoginSuccess(true);
 
+            // 로그인 성공 응답 반환
             return ResponseEntity.ok().headers(headers).body(loginResponseDto);
 
         } catch (Exception e) {
+
+            // 로그인 실패 응답 반환
             loginResponseDto.setLoginSuccess(false);
             return ResponseEntity.badRequest().body(loginResponseDto);
         }
     }
 
+    // 카카오 액세스 토큰을 사용하여 카카오 사용자 정보를 조회하는 메소드
     public KakaoLoginEntity getKakaoInfo(String kakaoAccessToken) {
         RestTemplate rt = new RestTemplate();
 
