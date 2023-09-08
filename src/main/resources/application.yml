@@ -14,9 +14,10 @@ server:
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/moment?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+#    url: jdbc:mysql://localhost:3306/moment?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    url: jdbc:mysql://3.37.235.110:3306/moment?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: moment
-    password: moment0829
+    password: moMent0829
   jpa:
     database-platform: org.hibernate.dialect.MySQL5InnoDBDialect
     show-sql: true
