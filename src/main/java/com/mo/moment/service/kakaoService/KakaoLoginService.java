@@ -9,7 +9,7 @@ import com.mo.moment.dto.kakaoDto.KakaoAccountDto;
 import com.mo.moment.dto.kakaoDto.KakaoTokenDto;
 import com.mo.moment.dto.kakaoDto.LoginResponseDto;
 import com.mo.moment.entity.kakaoEntity.KakaoLoginEntity;
-import com.mo.moment.repository.kakaorepository.KakaoRepository;
+import com.mo.moment.repository.kakaoRepository.KakaoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
