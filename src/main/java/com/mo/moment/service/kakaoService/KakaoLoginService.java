@@ -9,6 +9,8 @@ import com.mo.moment.dto.kakaoDto.KakaoAccountDto;
 import com.mo.moment.dto.kakaoDto.KakaoTokenDto;
 import com.mo.moment.dto.kakaoDto.LoginResponseDto;
 import com.mo.moment.entity.kakaoEntity.KakaoLoginEntity;
+import com.mo.moment.jwt.AuthToken;
+import com.mo.moment.jwt.AuthTokenProvider;
 import com.mo.moment.repository.kakaoRepository.KakaoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpEntity;
@@ -27,6 +29,7 @@ import javax.transaction.Transactional;
 public class KakaoLoginService {
 
     private final KakaoRepository kakaoRepository;
+    private final AuthTokenProvider authTokenProvider;
 
     // 카카오 Oauth2를 통해 액세스 토큰을 가져오는 메서드
     @Transactional
@@ -90,7 +93,10 @@ public class KakaoLoginService {
                 kakaoRepository.save(kakaoLoginEntity);
             }
             loginResponseDto.setLoginSuccess(true);
+            // jwt토큰 발급
 
+            AuthToken appToken = authTokenProvider.createUserAppToken(String.valueOf(kakaoLoginEntity.getKakaoId()));
+            loginResponseDto.setAuthToken(appToken);
             // 로그인 성공 응답 반환
             return ResponseEntity.ok().headers(headers).body(loginResponseDto);
 
