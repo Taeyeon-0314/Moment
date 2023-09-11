@@ -6,6 +6,8 @@ import com.mo.moment.service.kakaoService.KakaoLoginService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
@@ -14,10 +16,11 @@ import javax.servlet.http.HttpServletRequest;
 @RequiredArgsConstructor
 public class KakaoLoginController {
     private final KakaoLoginService kakaoLoginService;
-    @GetMapping("/login/oauth2/callback/kakao")
-    public ResponseEntity<LoginResponseDto> kakaoLogin(HttpServletRequest request){
-        String code = request.getParameter("code");
+
+    @GetMapping("/login")
+    public ResponseEntity<LoginResponseDto> kakaoLogin(@RequestParam("code") String code){
         KakaoTokenDto kakaoAccessToken = kakaoLoginService.getKakaoAccessToken(code);
-        return kakaoLoginService.kakaoLogin(kakaoAccessToken.getAccess_token());
+        ResponseEntity<LoginResponseDto> loginResponseDtoResponseEntity = kakaoLoginService.kakaoLogin(kakaoAccessToken.getAccess_token());
+        return loginResponseDtoResponseEntity;
     }
 }
