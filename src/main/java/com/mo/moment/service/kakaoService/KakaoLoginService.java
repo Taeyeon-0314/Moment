@@ -40,7 +40,8 @@ public class KakaoLoginService {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", "authorization_code");
         params.add("client_id", "38f086bf0a00724a17a65858229e9333");
-        params.add("redirect_uri", "http://localhost:8080/login/oauth2/callback/kakao");
+//        params.add("redirect_uri", "http://3.37.235.110:8080/login");
+        params.add("redirect_uri", "http://localhost:3000/login/oauth2/callback/kakao");
         params.add("code", code);
         params.add("client_secret", "Lzak9SeSUnexiSOSxcOdgf90kKU0oGzo");
 
@@ -85,7 +86,6 @@ public class KakaoLoginService {
         KakaoLoginEntity existOwner = kakaoRepository.findByKakaoId(kakaoLoginEntity.getKakaoId()).orElse(null);
         try {
             if (existOwner == null) {
-                System.out.println("처음 로그인 하는 회원입니다.");
                 // 데이터베이스에 새로운 회원으로 저장
                 kakaoRepository.save(kakaoLoginEntity);
             }
