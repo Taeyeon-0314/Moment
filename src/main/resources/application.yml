@@ -14,6 +14,7 @@ server:
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
+#    url: jdbc:mysql://127.0.0.1:3306/moment?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     url: jdbc:mysql://3.37.235.110:3306/moment?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: moment
     password: moMent0829
@@ -22,9 +23,25 @@ spring:
     show-sql: true
     generate-ddl: true
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
+
+  cloud:
+    aws:
+      credentials:
+        access-key: AKIAZVAX5AU7SCIEIMNN
+        secret-key: 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
+      region:
+        static: ap-northeast-2
+      stack:
+        auto: false
 app:
   auth:
     tokenSecret: A/cLbJ0TuXSPf0SdJlKRbTx+r7GFrcDwGAFzfw3u7yY=
-    tokenExpiry: 3333333333
+    tokenExpiry: 1800000
+    refreshTokenExpiry: 86400000
+
+kakao:
+  auth:
+    clientId: 38f086bf0a00724a17a65858229e9333
+    clientSecret: Lzak9SeSUnexiSOSxcOdgf90kKU0oGzo
 

@@ -1,0 +1,4 @@
+kakao:
+  auth:
+    clientId: ${kakao.auth.clientId}
+    clientSecret: ${kakao.auth.clientSecret}

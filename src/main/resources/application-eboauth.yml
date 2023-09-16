@@ -1,4 +1,6 @@
 app:
   auth:
-    tokenSecret: ${app.auth.token.secret}
-    tokenExpiry: ${app.auth.token.expiry}
+    tokenSecret: ${app.auth.tokenSecret}
+    tokenExpiry: ${app.auth.tokenExpiry}
+    refreshTokenExpiry: ${app.auth.refreshTokenExpiry}
+    refreshTokenSecret: ${app.auth.refreshTokenSecret}
