@@ -3,16 +3,18 @@ package com.mo.moment.entity.kakaoEntity;
 import lombok.Builder;
 import lombok.Getter;
 
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
 
 @Getter
 @Entity
 @Table(name = "kakao_login_entity")
 public class KakaoLoginEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
     private Long kakaoId;
+    @Column(unique = true)
     private String email;
     @Column(name = "kakao_name")
     private String kakaoName;
@@ -22,16 +24,13 @@ public class KakaoLoginEntity {
     public KakaoLoginEntity() {
     }
 
-    public KakaoLoginEntity(Long kakaoId,String email, String kakaoName , String profile_image) {
-        this.kakaoId = kakaoId;
+    public KakaoLoginEntity(String email, String kakaoName , String profile_image) {
         this.email = email;
         this.kakaoName = kakaoName;
         this.profile_image = profile_image;
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+
 
     public void setEmail(String email) {
         this.email = email;
@@ -46,8 +45,7 @@ public class KakaoLoginEntity {
     }
 
     @Builder
-    public KakaoLoginEntity(Long id, Long kakaoId, String email, String kakaoName, String profile_image) {
-        this.id = id;
+    public KakaoLoginEntity(Long kakaoId, String email, String kakaoName, String profile_image) {
         this.kakaoId=kakaoId;
         this.email = email;
         this.kakaoName = kakaoName;
