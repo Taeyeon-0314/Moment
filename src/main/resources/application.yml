@@ -24,16 +24,23 @@ spring:
     generate-ddl: true
     hibernate:
       ddl-auto: update
-
-  cloud:
-    aws:
-      credentials:
-        access-key: AKIAZVAX5AU7SCIEIMNN
-        secret-key: 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
-      region:
-        static: ap-northeast-2
-      stack:
-        auto: false
+  servlet:
+    multipart:
+      max-request-size: 100MB
+      max-file-size: 100MB
+  mvc:
+    hiddenmethod:
+      filter:
+        enabled: true
+cloud:
+  aws:
+    credentials:
+      access-key: AKIAZVAX5AU7SCIEIMNN
+      secret-key: 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
+    region:
+      static: ap-northeast-2
+    stack:
+      auto: false
 app:
   auth:
     tokenSecret: A/cLbJ0TuXSPf0SdJlKRbTx+r7GFrcDwGAFzfw3u7yY=
