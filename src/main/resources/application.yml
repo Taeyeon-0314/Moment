@@ -24,14 +24,7 @@ spring:
     generate-ddl: true
     hibernate:
       ddl-auto: update
-  servlet:
-    multipart:
-      max-request-size: 100MB
-      max-file-size: 100MB
-  mvc:
-    hiddenmethod:
-      filter:
-        enabled: true
+
 cloud:
   aws:
     credentials:
@@ -41,6 +34,14 @@ cloud:
       static: ap-northeast-2
     stack:
       auto: false
+      servlet:
+        multipart:
+          max-request-size: 100MB
+          max-file-size: 100MB
+      mvc:
+        hiddenmethod:
+          filter:
+            enabled: true
 app:
   auth:
     tokenSecret: A/cLbJ0TuXSPf0SdJlKRbTx+r7GFrcDwGAFzfw3u7yY=
