@@ -7,9 +7,9 @@ import lombok.NoArgsConstructor;
 import javax.persistence.*;
 
 @Entity
-@Table(name = "refresh_token")
 @Getter
 @NoArgsConstructor
+@Table(name = "refresh_token")
 public class RefreshToken  extends BaseTimeEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,3 +33,4 @@ public class RefreshToken  extends BaseTimeEntity{
     }
 
 }
+

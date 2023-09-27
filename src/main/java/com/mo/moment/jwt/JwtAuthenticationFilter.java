@@ -26,12 +26,10 @@ public class JwtAuthenticationFilter extends GenericFilterBean {
 
         // HTTP 요청으로부터 토큰을 가져옴
         String token = tokenProvider.resolveToken((HttpServletRequest) request);
-
-        //로그에 토큰 검증 정보 출력
-        log.info("[Verifying token]");
-        log.info(((HttpServletRequest) request).getRequestURI().toString());
-
-        // 토큰이 존재하고 유효하면 인증 정보를 가져와서 보안 컨텍스트에 설정
+//        //로그에 토큰 검증 정보 출력
+//        log.info("[Verifying token]");
+//        log.info(((HttpServletRequest) request).getRequestURI().toString());
+//        // 토큰이 존재하고 유효하면 인증 정보를 가져와서 보안 컨텍스트에 설정
         if(token!= null && tokenProvider.validationToken(token)){
             Authentication authentication = tokenProvider.getAuthentication(token);
             SecurityContextHolder.getContext().setAuthentication(authentication);
