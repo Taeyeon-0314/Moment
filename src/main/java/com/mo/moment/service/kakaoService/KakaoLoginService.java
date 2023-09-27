@@ -59,8 +59,9 @@ public class KakaoLoginService {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", "authorization_code");
         params.add("client_id", clientId);
-        params.add("redirect_uri", "https://www.moment.r-e.kr/login/oauth2/callback/kakao");
-        //params.add("redirect_uri", "http://localhost:8080/login/oauth2/callback/kakao");
+//        params.add("redirect_uri", "https://www.moment.r-e.kr/login/oauth2/callback/kakao");
+        params.add("redirect_uri", "http://localhost:3000/login/oauth2/callback/kakao");
+//        params.add("redirect_uri", "http://localhost:8080/login/oauth2/code/kakao");
         params.add("code", code);
         params.add("client_secret", clientSecret);
 
@@ -88,9 +89,11 @@ public class KakaoLoginService {
         }
         return kakaoTokenDto;
     }
-    // localhost용
+
+    //서버 로컬 테스트용
     @Transactional
-    public KakaoTokenDto getKakaoAccessToken1(String code, String text) {
+    public KakaoTokenDto getKakaoAccessToken1(String code) {
+
 
         // Http 요청 헤더 설정
         HttpHeaders headers = new HttpHeaders();
@@ -100,7 +103,7 @@ public class KakaoLoginService {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", "authorization_code");
         params.add("client_id", clientId);
-        params.add("redirect_uri", "http://localhost:3000/login/oauth2/callback/kakao");
+        params.add("redirect_uri", "http://localhost:8080/login/oauth2/code/kakao");
         params.add("code", code);
         params.add("client_secret", clientSecret);
 
@@ -159,7 +162,10 @@ public class KakaoLoginService {
                 kakaoRepository.save(kakaoLoginEntity);
             }
             loginResponseDto.setLoginSuccess(true);
-            RefreshToken refreshToken = jwtRepository.findByTokenKey(kakaoLoginEntity.getKakaoId()).get();
+
+            Long kakaoId = kakaoLoginEntity.getKakaoId();
+            RefreshToken refreshToken = jwtRepository.findByTokenKey(kakaoId).get();
+
             TokenRequestDto tokenRequestDto = TokenRequestDto.builder()
                     .accessToken(token.getAccessToken())
                     .refreshToken(refreshToken.getToken())

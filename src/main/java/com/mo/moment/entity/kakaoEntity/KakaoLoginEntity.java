@@ -10,7 +10,7 @@ import javax.persistence.Table;
 
 @Getter
 @Entity
-@Table(name = "kakao_login_entity")
+@Table(name = "kakao_login")
 public class KakaoLoginEntity {
     @Id
     private Long kakaoId;
