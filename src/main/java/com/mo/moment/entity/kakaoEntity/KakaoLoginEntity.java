@@ -1,18 +1,20 @@
 package com.mo.moment.entity.kakaoEntity;
 
+import com.mo.moment.entity.boardEntity.BoardEntity;
+import com.mo.moment.jwt.entity.RefreshToken;
 import lombok.Builder;
 import lombok.Getter;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Entity
 @Table(name = "kakao_login")
 public class KakaoLoginEntity {
     @Id
+    @Column(name = "kakao_id")
     private Long kakaoId;
     @Column(unique = true)
     private String email;
@@ -20,6 +22,10 @@ public class KakaoLoginEntity {
     private String kakaoName;
     @Column(name = "profile_image")
     private String profile_image;
+    @OneToMany(mappedBy = "kakaoLoginEntity" , cascade = CascadeType.REMOVE , orphanRemoval = true , fetch = FetchType.LAZY)
+    private List<BoardEntity> boardEntities = new ArrayList<>();
+    @OneToOne(mappedBy = "kakaoLoginEntity" , cascade = CascadeType.REMOVE , orphanRemoval = true , fetch = FetchType.LAZY)
+    private RefreshToken refreshToken;
 
     public KakaoLoginEntity() {
     }

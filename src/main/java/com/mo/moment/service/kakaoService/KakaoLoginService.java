@@ -5,8 +5,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.mo.moment.config.KoreaTime;
 import com.mo.moment.dto.kakaoDto.KakaoAccountDto;
 import com.mo.moment.dto.kakaoDto.KakaoTokenDto;
+import com.mo.moment.dto.kakaoDto.KakaoTokenSaveDto;
 import com.mo.moment.dto.kakaoDto.LoginResponseDto;
 import com.mo.moment.entity.kakaoEntity.KakaoLoginEntity;
 import com.mo.moment.jwt.AuthTokenProvider;
@@ -19,21 +21,26 @@ import com.mo.moment.jwt.exception.CUserNotFoundException;
 import com.mo.moment.repository.jwtRepository.JwtRepository;
 import com.mo.moment.repository.kakaoRepository.KakaoRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import javax.transaction.Transactional;
+import java.time.ZonedDateTime;
 
 @Service
 @RequiredArgsConstructor
+@Log4j2
 public class KakaoLoginService {
 
     private final KakaoRepository kakaoRepository;
@@ -61,7 +68,6 @@ public class KakaoLoginService {
         params.add("client_id", clientId);
 //        params.add("redirect_uri", "https://www.moment.r-e.kr/login/oauth2/callback/kakao");
         params.add("redirect_uri", "http://localhost:3000/login/oauth2/callback/kakao");
-//        params.add("redirect_uri", "http://localhost:8080/login/oauth2/code/kakao");
         params.add("code", code);
         params.add("client_secret", clientSecret);
 
@@ -133,10 +139,10 @@ public class KakaoLoginService {
     }
 
     // 카카오 액세스 토큰을 사용하여 로그인 처리를 수행하는 메소드
-    public ResponseEntity<TokenKakaoAccountDto> kakaoLogin(String kakaoAccessToken) {
+    public ResponseEntity<TokenKakaoAccountDto> kakaoLogin(KakaoTokenDto kakaoAccessToken) {
 
         // 카카오 사용자 정보 조회
-        KakaoLoginEntity kakaoLoginEntity = getKakaoInfo(kakaoAccessToken);
+        KakaoLoginEntity kakaoLoginEntity = getKakaoInfo(kakaoAccessToken.getAccess_token());
         HttpHeaders headers = new HttpHeaders();
 
         // 로그인 응답 데이터 생성
@@ -148,39 +154,54 @@ public class KakaoLoginService {
         KakaoLoginEntity existOwner = kakaoRepository.findById(kakaoLoginEntity.getKakaoId()).orElse(null);
 
         // jwt토큰 발급
-        Token token = authTokenProvider.createToken(kakaoLoginEntity.getKakaoId(), kakaoLoginEntity);
+        KakaoTokenSaveDto kakaoTokenSaveDto = KakaoTokenSaveDto.builder()
+                .id_token(kakaoAccessToken.getId_token())
+                .access_token(kakaoAccessToken.getAccess_token())
+                .refresh_token(kakaoAccessToken.getRefresh_token())
+                .token_type(kakaoAccessToken.getToken_type())
+                .refresh_token_expires_in(kakaoAccessToken.getRefresh_token_expires_in())
+                .expires_in(kakaoAccessToken.getExpires_in())
+                .scope(kakaoAccessToken.getScope())
+                .build();
+        Token token = authTokenProvider.createToken(kakaoLoginEntity.getKakaoId(), kakaoTokenSaveDto);
+
 
         try {
             if (existOwner == null) {
-
+                kakaoRepository.save(kakaoLoginEntity);
                 // 데이터베이스에 새로운 회원으로 저장
                 RefreshToken refreshToken = RefreshToken.builder()
                         .token(token.getRefreshToken())
-                        .tokenKey(kakaoLoginEntity.getKakaoId())
+                        .kakaoLoginEntity(kakaoLoginEntity)
                         .build();
                 jwtRepository.save(refreshToken);
-                kakaoRepository.save(kakaoLoginEntity);
+
             }
             loginResponseDto.setLoginSuccess(true);
 
             Long kakaoId = kakaoLoginEntity.getKakaoId();
-            RefreshToken refreshToken = jwtRepository.findByTokenKey(kakaoId).get();
+            RefreshToken refreshToken = jwtRepository.findByKakaoLoginEntity_KakaoId(kakaoId).get();
 
             TokenRequestDto tokenRequestDto = TokenRequestDto.builder()
                     .accessToken(token.getAccessToken())
                     .refreshToken(refreshToken.getToken())
+                    .issuedAt(token.getIssuedAt())
                     .accessTokenExpireDate(token.getAccessTokenExpireDate())
                     .build();
             TokenKakaoAccountDto tokenKakaoAccountDto = TokenKakaoAccountDto.builder()
                     .accessToken(tokenRequestDto.getAccessToken())
                     .accessTokenExpireDate(tokenRequestDto.getAccessTokenExpireDate())
-                    .kakaoId(refreshToken.getId())
+                    .kakaoId(refreshToken.getKakaoLoginEntity().getKakaoId())
                     .profile_image(kakaoLoginEntity.getProfile_image())
+                    .issuedAt(tokenRequestDto.getIssuedAt())
                     .kakaoName(kakaoLoginEntity.getKakaoName())
                     .email(kakaoLoginEntity.getEmail())
                     .refreshToken(tokenRequestDto.getRefreshToken())
                     .build();
 
+            KoreaTime koreaTime = new KoreaTime();
+            ZonedDateTime zonedDateTime = koreaTime.koreaDateTime();
+            log.info("KST Date: {}, tokenKakaoAccountDto: {}", zonedDateTime, tokenKakaoAccountDto);
             // 로그인 성공 응답 반환
             return ResponseEntity.ok().headers(headers).body(tokenKakaoAccountDto);
         } catch (Exception e) {
@@ -247,7 +268,7 @@ public class KakaoLoginService {
 
     // 토큰 재발급
     @Transactional
-    public Token reissue(TokenRequestDto tokenRequestDto) {
+    public Token reissue(TokenRequestDto tokenRequestDto, KakaoTokenSaveDto kakaoToken) {
 
         // 리프레시 토큰이 유효하지 않으면 예외발생
         if (!authTokenProvider.validationToken(tokenRequestDto.getRefreshToken())) {
@@ -259,14 +280,13 @@ public class KakaoLoginService {
         // 액세스 토큰으로부터 인증 정보 가져옴
         Authentication authentication = authTokenProvider.getAuthentication(accessToken);
 
-        System.out.println(authentication.getName());
 
         //인증된 사용자의 정보를 데이터베이스에서 가져옴 / 찾을수 없으면 예외
         KakaoLoginEntity kakaoLoginEntity = kakaoRepository.findById(Long.valueOf(authentication.getName()))
                 .orElseThrow(CUserNotFoundException::new);
 
         //리프레시 토큰을 데이터베이스에서 가져옴 / 찾을수 없으면 예외
-        RefreshToken refreshToken = jwtRepository.findByTokenKey(kakaoLoginEntity.getKakaoId())
+        RefreshToken refreshToken = jwtRepository.findByKakaoLoginEntity_KakaoId(kakaoLoginEntity.getKakaoId())
                 .orElseThrow(CRefreshTokenException::new);
 
         // 요청받은 리프레시 토큰과 데이터베이스의 리프레시 토큰이 일치하지 않으면 예외 발생
@@ -274,11 +294,21 @@ public class KakaoLoginService {
             throw new CRefreshTokenException();
         }
         // 새로운 토큰 생성
-        Token newCreatedToken = authTokenProvider.createToken(kakaoLoginEntity.getKakaoId(), kakaoLoginEntity);
+        Token newCreatedToken = authTokenProvider.createToken(kakaoLoginEntity.getKakaoId(), kakaoToken);
 
         // 리프레시 토큰을 업데이트하고 db저장
         RefreshToken updateRefreshToken = refreshToken.updateToken(newCreatedToken.getRefreshToken());
         jwtRepository.save(updateRefreshToken);
+
+        Authentication currentAuthentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (currentAuthentication != null) {
+            // 만료시킬 인증 정보를 생성합니다. 예를 들어, 인증 토큰을 비워서 만료시킬 수 있습니다.
+            Authentication expiredAuthentication = new UsernamePasswordAuthenticationToken(null, null, null);
+            // SecurityContextHolder에 새로운 인증 정보를 설정하여 현재 인증 정보를 만료시킵니다.
+            SecurityContextHolder.getContext().setAuthentication(expiredAuthentication);
+        }
+
 
         // 새로 생성된 토큰 반환
         return newCreatedToken;
