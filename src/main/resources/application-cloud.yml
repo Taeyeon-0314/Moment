@@ -5,3 +5,5 @@ cloud:
       secret-key: ${cloud.aws.credentials.secret-key}
     region:
       static: ${cloud.aws.region.static}
+    s3:
+      bucket : ${cloud.aws.s3.bucket}
