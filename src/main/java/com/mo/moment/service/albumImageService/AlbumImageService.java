@@ -10,9 +10,12 @@ import com.mo.moment.dto.albumImageDto.AlbumImageDto;
 import com.mo.moment.dto.albumImageDto.AlbumImageViewPageDto;
 import com.mo.moment.dto.albumImageDto.AlbumImageViewRequestDto;
 import com.mo.moment.entity.albumEntity.AlbumImageEntity;
+import com.mo.moment.entity.boardEntity.BoardEntity;
 import com.mo.moment.repository.albumImageRepository.AlbumImageRepository;
+import com.mo.moment.repository.boardRepository.BoardRepository;
 import lombok.RequiredArgsConstructor;
 import net.coobird.thumbnailator.Thumbnails;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -30,21 +33,26 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class AlbumImageService {
+
     // Amazon S3 버킷 이름
-    private static String bucketName = "moment-images-storage";
+    @Value("${cloud.aws.s3.bucket}")
+    private String bucketName;
 
     // Amazon S3 클라이언트와 앨범 이미지 레포지토리를 주입받는 생성자
     private final AmazonS3Client amazonS3Client;
+
     private final AlbumImageRepository imageRepository;
+
+    private final BoardRepository boardRepository;
 
     // 여러 이미지를 저장하고 그 결과 URL을 반환하는 메서드
     @Transactional
-    public List<String> saveImages(AlbumImageDto albumImageDto) {
+    public List<String> saveImages(AlbumImageDto albumImageDto, Long boardId) {
         List<String> resultList = new ArrayList<>();
 
         // 전달된 MultipartFile 리스트에서 각 이미지를 저장하고 URL을 리스트에 추가
         for (MultipartFile multipartFile : albumImageDto.getImages()) {
-            String value = saveImage(multipartFile);
+            String value = saveImage(multipartFile , boardId);
             resultList.add(value);
         }
 
@@ -53,7 +61,7 @@ public class AlbumImageService {
 
     // 이미지를 저장하고 저장된 이미지의 URL을 반환하는 메서드
     @Transactional
-    public String saveImage(MultipartFile multipartFile) {
+    public String saveImage(MultipartFile multipartFile,Long boardId) {
 
         // 업로드된 파일의 원래 이름을 가져옴
         String originalName = multipartFile.getOriginalFilename();
@@ -95,8 +103,21 @@ public class AlbumImageService {
                     // 리사이즈된 이미지의 접근 URL을 가져와 AlbumImage 엔티티에 저장
                     String resizeUrl = amazonS3Client.getUrl(bucketName, resizedFilename).toString();
                     image.setResizeUrl(resizeUrl);
+                    BoardEntity boardEntity = boardRepository.findById(boardId).get();
+                    image.setBoardEntity(boardEntity);
                     imageRepository.save(image);
 
+                    //로컬 리사이징 이미지 파일 삭제
+
+                    if(resizedImageFile != null && resizedImageFile.exists()){
+                        if(resizedImageFile.delete()){
+                            System.out.println("이미지 삭제됨");
+                        }else {
+                            System.out.println("이미지 삭제 실패");
+                        }
+                    }else {
+                        System.out.println("이미지 파일이 없음");
+                    }
                     //저장된 이미지의 접근 URL 반환
                     return image.getAccessUrl();
 
@@ -110,8 +131,22 @@ public class AlbumImageService {
                     // 리사이즈된 이미지의 접근 URL을 가져와 AlbumImage 엔티티에 저장
                     String resizeUrl = amazonS3Client.getUrl(bucketName, resizedFilename).toString();
                     image.setResizeUrl(resizeUrl);
+
+                    BoardEntity boardEntity = boardRepository.findById(boardId).get();
+                    image.setBoardEntity(boardEntity);
                     // AlbumImage 엔티티를 저장
                     imageRepository.save(image);
+
+                    //로컬 리사이징 이미지 파일 삭제
+                    if(resizedImageFile != null && resizedImageFile.exists()){
+                        if(resizedImageFile.delete()){
+                            System.out.println("이미지 삭제됨");
+                        }else {
+                            System.out.println("이미지 삭제 실패");
+                        }
+                    }else {
+                        System.out.println("이미지 파일이 없음");
+                    }
 
                     //저장된 이미지의 접근 URL 반환
                     return image.getAccessUrl();
@@ -130,7 +165,7 @@ public class AlbumImageService {
 
     }
 
-    // 이미지 리사이즈 메서드
+    // 이미지 리사이징 메서드
     private File resizeImage(MultipartFile originalImage) throws IOException {
         // 이미지 리사이징 (예: 가로 300px로 리사이즈)
         File resizedFile = new File("resized_" + originalImage.getOriginalFilename());
@@ -143,13 +178,31 @@ public class AlbumImageService {
     public ResponseEntity<AlbumImageViewPageDto> allView(String kakaoId, Pageable pageable) {
         Page<AlbumImageEntity> imageEntityPage = imageRepository.findByKakaoId(Long.valueOf(kakaoId), pageable);
 
-        Page<AlbumImageViewRequestDto> albumImageViewDto = imageEntityPage.map(albumImageEntity -> AlbumImageViewRequestDto.builder()
-                .id(albumImageEntity.getId())
-                .boardId(albumImageEntity.getBoardId())
-                .metaDateTime(albumImageEntity.getMetaDateTime())
-                .accessUrl(albumImageEntity.getAccessUrl())
-                .resizeUrl(albumImageEntity.getResizeUrl())
-                .build());
+        Page<AlbumImageViewRequestDto> albumImageViewDto = imageEntityPage.map(albumImageEntity -> {
+            BoardEntity boardEntity = boardRepository.findById(albumImageEntity.getBoardEntity().getBoardId()).get();
+            if(boardEntity.getContent().length() > 0){
+                return AlbumImageViewRequestDto.builder()
+                        .id(albumImageEntity.getId())
+                        .originName(albumImageEntity.getOriginName())
+                        .boardId(albumImageEntity.getBoardEntity().getBoardId())
+                        .metaDateTime(albumImageEntity.getMetaDateTime())
+                        .accessUrl(albumImageEntity.getAccessUrl())
+                        .resizeUrl(albumImageEntity.getResizeUrl())
+                        .contentCheck(true)
+                        .build();
+            }else{
+               return AlbumImageViewRequestDto.builder()
+                        .id(albumImageEntity.getId())
+                       .originName(albumImageEntity.getOriginName())
+                        .boardId(albumImageEntity.getBoardEntity().getBoardId())
+                        .metaDateTime(albumImageEntity.getMetaDateTime())
+                        .accessUrl(albumImageEntity.getAccessUrl())
+                        .resizeUrl(albumImageEntity.getResizeUrl())
+                        .contentCheck(false)
+                        .build();
+            }
+
+        });
 
         AlbumImageViewPageDto pageResponse = new AlbumImageViewPageDto();
         pageResponse.setContent(albumImageViewDto.getContent());

@@ -10,19 +10,23 @@ import java.util.Date;
 public class AlbumImageViewRequestDto {
 
     private Long id;
+    private String originName;
     private String accessUrl;
     private String resizeUrl;
     private Date metaDateTime;
     private Long boardId;
+    private boolean contentCheck;
 
 
 
     @Builder
-    public AlbumImageViewRequestDto(Long id , String resizeUrl , String accessUrl ,  Date metaDateTime , Long boardId ){
+    public AlbumImageViewRequestDto(Long id , String resizeUrl , String accessUrl , String originName ,  Date metaDateTime , Long boardId , boolean contentCheck){
         this.id = id;
-        this.resizeUrl = resizeUrl;
+        this.originName = originName;
         this.accessUrl = accessUrl;
+        this.resizeUrl = resizeUrl;
         this.metaDateTime = metaDateTime;
         this.boardId = boardId;
+        this.contentCheck = contentCheck;
     }
 }

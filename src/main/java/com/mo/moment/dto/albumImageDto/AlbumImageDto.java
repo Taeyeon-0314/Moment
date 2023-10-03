@@ -15,4 +15,5 @@ import java.util.List;
 @Setter
 public class AlbumImageDto {
     private List<MultipartFile> images = new ArrayList<>();
+    private String content;
 }
