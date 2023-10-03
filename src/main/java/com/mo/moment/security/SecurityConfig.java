@@ -71,6 +71,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         CorsConfiguration configuration = new CorsConfiguration();
         // 허용할 오리진(도메인)을 설정합니다.
         configuration.addAllowedOrigin("https://localhost:3000");
+        configuration.addAllowedOrigin("http://localhost:3000");
         configuration.addAllowedOrigin("http://localhost:8080");
         configuration.addAllowedOrigin("https://www.moment.r-e.kr");
         // 허용할 HTTP 메서드를 설정합니다.
