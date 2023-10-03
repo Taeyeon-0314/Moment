@@ -1,5 +1,6 @@
 package com.mo.moment.jwt.entity;
 
+import com.mo.moment.entity.kakaoEntity.KakaoLoginEntity;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -15,8 +16,10 @@ public class RefreshToken  extends BaseTimeEntity{
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Long tokenKey;
+
+    @OneToOne
+    @JoinColumn(name = "kakao_id")
+    private KakaoLoginEntity kakaoLoginEntity;
 
     @Column(nullable = false)
     private String token;
@@ -27,8 +30,8 @@ public class RefreshToken  extends BaseTimeEntity{
     }
 
     @Builder
-    public RefreshToken(Long tokenKey, String token){
-        this.tokenKey = tokenKey;
+    public RefreshToken(KakaoLoginEntity kakaoLoginEntity, String token){
+        this.kakaoLoginEntity = kakaoLoginEntity;
         this.token = token;
     }
 
