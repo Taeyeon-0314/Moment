@@ -49,11 +49,16 @@ public class BoardService {
         }
     }
 
-    public ResponseEntity<Boolean> findByBoardIdAndImageDelete(Long boardId) {
+    public ResponseEntity<Boolean> findByBoardIdAndImageDelete(Long boardId, String kakaoId) {
         List<AlbumImageEntity> imageEntityList = imageRepository.findByBoardEntity_BoardId(boardId);
+
         for (AlbumImageEntity imageEntity : imageEntityList){
-            deleteImageFromS3(imageEntity.getAccessUrl());
-            deleteImageFromS3(imageEntity.getResizeUrl());
+            if(imageEntity.getKakaoId().equals(Long.valueOf(kakaoId))){
+                deleteImageFromS3(imageEntity.getAccessUrl());
+                deleteImageFromS3(imageEntity.getResizeUrl());
+            }else {
+                return ResponseEntity.status(401).body(false);
+            }
         }
         boardRepository.deleteById(boardId);
         return ResponseEntity.status(200).body(true);

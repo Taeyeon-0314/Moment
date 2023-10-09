@@ -19,7 +19,7 @@ public class BoardController {
     private final BoardService boardService;
     private final AuthTokenProvider authTokenProvider;
 
-    @GetMapping("/{boardId}")
+    @GetMapping("/{board_id}")
     public ResponseEntity<BoardResponseDto> boardView(@PathVariable Long boardId , HttpServletRequest request){
 
         String header = request.getHeader("X-AUTH-TOKEN");
@@ -32,7 +32,7 @@ public class BoardController {
         return boardService.findByBoardIdAndContent(boardId);
     }
 
-    @DeleteMapping("/{boardId}")
+    @DeleteMapping("/{board_id}")
     public ResponseEntity<Boolean> boardDelete(@PathVariable Long boardId, HttpServletRequest request){
 
         String header = request.getHeader("X-AUTH-TOKEN");
@@ -42,6 +42,6 @@ public class BoardController {
         log.info("[boardDelete]");
         log.info("KST Date: {}, kakaoId: {}", zonedDateTime, kakaoId);
 
-        return boardService.findByBoardIdAndImageDelete(boardId);
+        return boardService.findByBoardIdAndImageDelete(boardId,kakaoId);
     }
 }

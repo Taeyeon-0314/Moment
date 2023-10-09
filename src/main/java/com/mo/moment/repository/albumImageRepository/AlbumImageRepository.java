@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface AlbumImageRepository extends JpaRepository<AlbumImageEntity,Long> {
-    Page<AlbumImageEntity> findByKakaoIdOrderByMetaDateTimeDesc(Long kakaoId , Pageable pageable);
     Page<AlbumImageEntity> findByKakaoId(Long kakaoId , Pageable pageable);
 
     List<AlbumImageEntity> findByBoardEntity_BoardId(Long boardId);

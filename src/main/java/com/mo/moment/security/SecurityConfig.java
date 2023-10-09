@@ -49,7 +49,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 // HttpServletRequest에 따라 접근제한
                 .authorizeRequests()
                 // 여기있는 모든 경로는 인증 없이 접근이 가능
-                .antMatchers("/login*/**", "/reissue*/**","/","/login/").permitAll()
+                .antMatchers("/login*/**", "/reissue*/**","/","/login/" , "/album/image").permitAll()
                 // /exception/** GET요청은 인증없이 접근 가능
                 .antMatchers(HttpMethod.GET, "/exception/**").permitAll()
                 // 그 외의 모든 요청은 user역할을 가진 사용자만 접근 가능

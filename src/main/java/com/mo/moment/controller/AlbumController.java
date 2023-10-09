@@ -11,13 +11,11 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.ZonedDateTime;
-import java.util.List;
 @Log4j2
 @RestController
 @RequiredArgsConstructor
@@ -29,11 +27,25 @@ public class AlbumController {
     private final BoardService boardService;
 
     @PutMapping("/image")
-    @ResponseStatus(HttpStatus.OK)
-    public List<String> saveImage(@ModelAttribute AlbumImageDto albumImageDto){
-        String content = albumImageDto.getContent();
-        Long boardId = boardService.saveBoard(content);
-        return albumImageService.saveImages(albumImageDto,boardId);
+    public ResponseEntity<?> saveImage(@ModelAttribute AlbumImageDto albumImageDto){
+        if(albumImageDto.getImages().size()>5){
+            return ResponseEntity.status(400).body("파일은 5개까지만 가능해요!");
+        }else {
+            String content = albumImageDto.getContent();
+            Long boardId = boardService.saveBoard(content);
+            return albumImageService.saveImages(albumImageDto,boardId);
+        }
+    }
+
+    @DeleteMapping("/{image_id}")
+    public ResponseEntity<?> imageDelete(@PathVariable Long image_id, HttpServletRequest request) {
+        String header = request.getHeader("X-AUTH-TOKEN");
+        String kakaoId = authTokenProvider.getUserPk(header);
+        KoreaTime koreaTime = new KoreaTime();
+        ZonedDateTime zonedDateTime = koreaTime.koreaDateTime();
+        log.info("[imageDelete]");
+        log.info("KST Date: {}, image_id: {}", zonedDateTime, image_id);
+        return albumImageService.deleteImage(image_id , kakaoId);
     }
 
     @GetMapping("/imageview")

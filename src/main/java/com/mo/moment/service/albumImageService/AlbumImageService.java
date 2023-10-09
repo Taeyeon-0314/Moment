@@ -1,6 +1,7 @@
 package com.mo.moment.service.albumImageService;
 
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
@@ -47,7 +48,7 @@ public class AlbumImageService {
 
     // 여러 이미지를 저장하고 그 결과 URL을 반환하는 메서드
     @Transactional
-    public List<String> saveImages(AlbumImageDto albumImageDto, Long boardId) {
+    public ResponseEntity<?> saveImages(AlbumImageDto albumImageDto, Long boardId) {
         List<String> resultList = new ArrayList<>();
 
         // 전달된 MultipartFile 리스트에서 각 이미지를 저장하고 URL을 리스트에 추가
@@ -56,7 +57,7 @@ public class AlbumImageService {
             resultList.add(value);
         }
 
-        return resultList;
+        return ResponseEntity.status(200).body(resultList);
     }
 
     // 이미지를 저장하고 저장된 이미지의 URL을 반환하는 메서드
@@ -211,5 +212,23 @@ public class AlbumImageService {
         pageResponse.setTotalPages(albumImageViewDto.getTotalPages());
         pageResponse.setLast(albumImageViewDto.isLast());
         return ResponseEntity.status(200).body(pageResponse);
+    }
+
+    public ResponseEntity<?> deleteImage(Long imageId, String kakaoId) {
+        AlbumImageEntity albumImageEntity = imageRepository.findById(imageId).get();
+        if (albumImageEntity.getKakaoId().equals(Long.valueOf(kakaoId))){
+            deleteImageFromS3(albumImageEntity.getAccessUrl());
+            deleteImageFromS3(albumImageEntity.getResizeUrl());
+            imageRepository.deleteById(imageId);
+            return ResponseEntity.status(200).body("이미지가 삭제되었습니다.");
+        }else {
+            return ResponseEntity.status(401).body("이미지 삭제 실패");
+        }
+    }
+
+    private void deleteImageFromS3(String imageUrl){
+        String splitStr = ".com/";
+        String fileName = imageUrl.substring(imageUrl.lastIndexOf(splitStr) + splitStr.length());
+        amazonS3Client.deleteObject(new DeleteObjectRequest(bucketName , fileName));
     }
 }
