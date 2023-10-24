@@ -4,11 +4,9 @@ import com.mo.moment.config.KoreaTime;
 import com.mo.moment.dto.kakaoDto.KakaoTokenDto;
 import com.mo.moment.dto.kakaoDto.KakaoTokenSaveDto;
 import com.mo.moment.jwt.AuthTokenProvider;
-import com.mo.moment.jwt.dto.Token;
 import com.mo.moment.jwt.dto.TokenKakaoAccountDto;
 import com.mo.moment.jwt.dto.TokenRequestDto;
 import com.mo.moment.response.ResponseService;
-import com.mo.moment.response.SingleResult;
 import com.mo.moment.service.kakaoService.KakaoLoginService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -33,17 +31,16 @@ public class KakaoLoginController {
         ZonedDateTime zonedDateTime = koreaTime.koreaDateTime();
         log.info("[kakaoLogin]");
         log.info("KST Date: {}, kakaoAccessToken: {}", zonedDateTime, kakaoAccessToken);
-
         return kakaoLoginService.kakaoLogin(kakaoAccessToken);
     }
 
     // 토큰을 재발급
     @PostMapping("/reissue")
-    public SingleResult<Token> reissue(@RequestBody TokenRequestDto tokenRequestDto, HttpServletRequest request) {
+    public ResponseEntity<?> reissue(@RequestBody TokenRequestDto tokenRequestDto, HttpServletRequest request) {
         String header = request.getHeader("X-AUTH-TOKEN");
         KakaoTokenSaveDto kakaoToken = authTokenProvider.getKakaoToken(header);
         // 토큰 재발급 하고 결과 반환
-        return responseService.getSingleResult(kakaoLoginService.reissue(tokenRequestDto, kakaoToken));
+        return kakaoLoginService.reissue(tokenRequestDto, kakaoToken);
     }
 
     @GetMapping("/login/oauth2/code/kakao")

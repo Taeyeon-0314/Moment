@@ -181,9 +181,9 @@ public class AlbumImageService {
 
         Page<AlbumImageViewRequestDto> albumImageViewDto = imageEntityPage.map(albumImageEntity -> {
             BoardEntity boardEntity = boardRepository.findById(albumImageEntity.getBoardEntity().getBoardId()).get();
-            if(boardEntity.getContent().length() > 0){
+            if(boardEntity.getContent() != null){
                 return AlbumImageViewRequestDto.builder()
-                        .id(albumImageEntity.getId())
+                        .imageId(albumImageEntity.getId())
                         .originName(albumImageEntity.getOriginName())
                         .boardId(albumImageEntity.getBoardEntity().getBoardId())
                         .metaDateTime(albumImageEntity.getMetaDateTime())
@@ -193,7 +193,7 @@ public class AlbumImageService {
                         .build();
             }else{
                return AlbumImageViewRequestDto.builder()
-                        .id(albumImageEntity.getId())
+                        .imageId(albumImageEntity.getId())
                        .originName(albumImageEntity.getOriginName())
                         .boardId(albumImageEntity.getBoardEntity().getBoardId())
                         .metaDateTime(albumImageEntity.getMetaDateTime())

@@ -1,15 +1,16 @@
-package com.mo.moment.dto.albumImageDto;
+package com.mo.moment.dto.boardDto;
 
 import lombok.*;
 
 import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AlbumImageViewPageDto {
-    private List<AlbumImageViewRequestDto> content;
+public class BoardViewPageDto {
+    private List<BoardPageRequestDto> board;
     private int pageSize;
     private int pageNumber;
     private int totalPages;

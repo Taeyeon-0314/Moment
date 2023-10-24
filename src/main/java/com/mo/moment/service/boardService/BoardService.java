@@ -2,16 +2,19 @@ package com.mo.moment.service.boardService;
 
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.DeleteObjectRequest;
-import com.mo.moment.dto.boardDto.BoardResponseDto;
+import com.mo.moment.dto.boardDto.*;
 import com.mo.moment.entity.albumEntity.AlbumImageEntity;
 import com.mo.moment.entity.boardEntity.BoardEntity;
 import com.mo.moment.repository.albumImageRepository.AlbumImageRepository;
 import com.mo.moment.repository.boardRepository.BoardRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -68,5 +71,60 @@ public class BoardService {
         String splitStr = ".com/";
         String fileName = imageUrl.substring(imageUrl.lastIndexOf(splitStr) + splitStr.length());
         amazonS3Client.deleteObject(new DeleteObjectRequest(bucketName , fileName));
+    }
+
+    public ResponseEntity<?> allview(String kakaoId, Pageable pageable) {
+        Page<BoardEntity> boardEntityPage = boardRepository.findByKakaoLoginEntity_KakaoId(Long.valueOf(kakaoId) , pageable);
+        Page<BoardPageRequestDto> boardPageView = boardEntityPage.map(boardEntity ->{
+            if(boardEntity.getContent() == null){
+                return BoardPageRequestDto.builder()
+                        .board_id(boardEntity.getBoardId())
+                        .content("내용이 없습니다.")
+                        .dateTime(boardEntity.getCreatedDate())
+                        .build();
+            }else{
+                return BoardPageRequestDto.builder()
+                        .board_id(boardEntity.getBoardId())
+                        .content(boardEntity.getContent())
+                        .dateTime(boardEntity.getCreatedDate())
+                        .build();
+            }
+        });
+        BoardViewPageDto pageResponse = new BoardViewPageDto();
+        pageResponse.setPageNumber(boardPageView.getNumber());
+        pageResponse.setPageSize(boardPageView.getSize());
+        pageResponse.setTotalPages(boardPageView.getTotalPages());
+        pageResponse.setLast(boardPageView.isLast());
+        pageResponse.setBoard(boardPageView.getContent());
+        return ResponseEntity.status(200).body(pageResponse);
+    }
+
+    public ResponseEntity<?> boardImageView(String kakaoId, Long boardId) {
+        Optional<BoardEntity> boardEntityOptional = boardRepository.findById(boardId);
+        if(boardEntityOptional.isPresent()){
+            BoardEntity boardEntity = boardEntityOptional.get();
+            if(boardEntity.getKakaoLoginEntity().getKakaoId().equals(Long.valueOf(kakaoId))){
+                List<BoardImageViewDto> boardImageViewDtoList = new ArrayList<>();
+                for (AlbumImageEntity albumImageEntity: boardEntity.getImageEntities()) {
+                    BoardImageViewDto boardImageViewDto = BoardImageViewDto.builder()
+                            .imageId(albumImageEntity.getId())
+                            .originName(albumImageEntity.getOriginName())
+                            .metaDateTime(albumImageEntity.getMetaDateTime())
+                            .accessUrl(albumImageEntity.getAccessUrl())
+                            .build();
+                            boardImageViewDtoList.add(boardImageViewDto);
+                }
+                BoardDetailViewDto boardDetailViewDto = BoardDetailViewDto.builder()
+                        .boardId(boardEntity.getBoardId())
+                        .content(boardEntity.getContent())
+                        .accessUrl(boardImageViewDtoList)
+                        .build();
+                return ResponseEntity.status(200).body(boardDetailViewDto);
+            }else{
+                return ResponseEntity.status(403).body("권한없음");
+            }
+        }else {
+            return ResponseEntity.status(401).body("게시판없음");
+        }
     }
 }

@@ -17,7 +17,7 @@ public class TokenRequestDto {
     private Date accessTokenExpireDate;
 
     @Builder
-    public TokenRequestDto(String accessToken, String refreshToken, Date accessTokenExpireDate , Date issuedAt){
+    public TokenRequestDto(String accessToken,String refreshToken,  Date accessTokenExpireDate , Date issuedAt){
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
         this.issuedAt = issuedAt;
