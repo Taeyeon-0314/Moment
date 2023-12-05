@@ -7,3 +7,4 @@ cloud:
       static: ${cloud.aws.region.static}
     s3:
       bucket : ${cloud.aws.s3.bucket}
+      user-image-bucket : ${cloud.aws.s3.user-image-bucket}

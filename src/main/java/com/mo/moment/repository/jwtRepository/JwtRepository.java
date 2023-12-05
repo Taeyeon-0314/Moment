@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface JwtRepository extends JpaRepository<RefreshToken, Long> {
 
     Optional<RefreshToken>findByKakaoLoginEntity_KakaoId(Long id);
+    RefreshToken findByToken(String refreshToken);
 }

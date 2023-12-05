@@ -62,8 +62,8 @@ public class KakaoLoginService {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", "authorization_code");
         params.add("client_id", clientId);
-//        params.add("redirect_uri", "https://www.moment.r-e.kr/login/oauth2/callback/kakao");
-        params.add("redirect_uri", "http://localhost:3000/login/oauth2/callback/kakao");
+        params.add("redirect_uri", "https://www.moment.r-e.kr/login/oauth2/callback/kakao");
+//        params.add("redirect_uri", "http://localhost:3000/login/oauth2/callback/kakao");
         params.add("code", code);
         params.add("client_secret", clientSecret);
 
@@ -149,16 +149,13 @@ public class KakaoLoginService {
         KakaoLoginEntity existOwner = kakaoRepository.findById(kakaoLoginEntity.getKakaoId()).orElse(null);
 
         // jwt토큰 발급
-        KakaoTokenSaveDto kakaoTokenSaveDto = KakaoTokenSaveDto.builder()
-                .id_token(kakaoAccessToken.getId_token())
-                .access_token(kakaoAccessToken.getAccess_token())
-                .refresh_token(kakaoAccessToken.getRefresh_token())
-                .token_type(kakaoAccessToken.getToken_type())
-                .refresh_token_expires_in(kakaoAccessToken.getRefresh_token_expires_in())
-                .expires_in(kakaoAccessToken.getExpires_in())
-                .scope(kakaoAccessToken.getScope())
+        ReissueKakaoUserInfoDto reissueKakaoUserInfoDto = ReissueKakaoUserInfoDto.builder()
+                .kakaoId(kakaoLoginEntity.getKakaoId())
+                .profile_image(kakaoLoginEntity.getProfile_image())
+                .kakaoName(kakaoLoginEntity.getKakaoName())
+                .email(kakaoLoginEntity.getEmail())
                 .build();
-        Token token = authTokenProvider.createToken(kakaoLoginEntity.getKakaoId(), kakaoTokenSaveDto);
+        Token token = authTokenProvider.createToken(kakaoLoginEntity.getKakaoId(), reissueKakaoUserInfoDto);
 
 
         try {
@@ -194,9 +191,9 @@ public class KakaoLoginService {
                         .accessToken(tokenRequestDto.getAccessToken())
                         .accessTokenExpireDate(tokenRequestDto.getAccessTokenExpireDate())
                         .kakaoId(refreshToken1.getKakaoLoginEntity().getKakaoId())
-                        .profile_image(kakaoLoginEntity.getProfile_image())
+                        .profile_image(existOwner.getProfile_image())
                         .issuedAt(tokenRequestDto.getIssuedAt())
-                        .kakaoName(kakaoLoginEntity.getKakaoName())
+                        .kakaoName(existOwner.getKakaoName())
                         .refreshToken(token.getRefreshToken())
                         .email(kakaoLoginEntity.getEmail())
                         .build();
@@ -235,9 +232,9 @@ public class KakaoLoginService {
                         .accessToken(tokenRequestDto.getAccessToken())
                         .accessTokenExpireDate(tokenRequestDto.getAccessTokenExpireDate())
                         .kakaoId(refreshToken.getKakaoLoginEntity().getKakaoId())
-                        .profile_image(kakaoLoginEntity.getProfile_image())
+                        .profile_image(existOwner.getProfile_image())
                         .issuedAt(tokenRequestDto.getIssuedAt())
-                        .kakaoName(kakaoLoginEntity.getKakaoName())
+                        .kakaoName(existOwner.getKakaoName())
                         .refreshToken(token.getRefreshToken())
                         .email(kakaoLoginEntity.getEmail())
                         .build();
@@ -321,21 +318,15 @@ public class KakaoLoginService {
 
     // 토큰 재발급
     @Transactional
-    public ResponseEntity<?> reissue(TokenRequestDto tokenRequestDto, KakaoTokenSaveDto kakaoToken) {
+    public ResponseEntity<?> reissue(String refreshTokenReissue) {
 
         // 리프레시 토큰이 유효하지 않으면 예외발생
-        if (!authTokenProvider.validationToken(tokenRequestDto.getRefreshToken())) {
+        if (!authTokenProvider.validationToken(refreshTokenReissue)) {
             throw new CRefreshTokenException();
         }
-        // 액세스 토큰을 가져옴
-        String accessToken = tokenRequestDto.getAccessToken();
-
-        // 액세스 토큰으로부터 인증 정보 가져옴
-        Authentication authentication = authTokenProvider.getAuthentication(accessToken);
-
 
         //인증된 사용자의 정보를 데이터베이스에서 가져옴 / 찾을수 없으면 예외
-        KakaoLoginEntity kakaoLoginEntity = kakaoRepository.findById(Long.valueOf(authentication.getName()))
+        KakaoLoginEntity kakaoLoginEntity = kakaoRepository.findById(jwtRepository.findByToken(refreshTokenReissue).getKakaoLoginEntity().getKakaoId())
                 .orElseThrow(CUserNotFoundException::new);
 
         //리프레시 토큰을 데이터베이스에서 가져옴 / 찾을수 없으면 예외
@@ -343,18 +334,25 @@ public class KakaoLoginService {
                 .orElseThrow(CRefreshTokenException::new);
 
         // 요청받은 리프레시 토큰과 데이터베이스의 리프레시 토큰이 일치하지 않으면 예외 발생
-        if (!refreshToken.getToken().equals(tokenRequestDto.getRefreshToken())) {
+        if (!refreshToken.getToken().equals(refreshTokenReissue)) {
             throw new CRefreshTokenException();
         }
+
+        ReissueKakaoUserInfoDto reissueKakaoUserInfoDto = ReissueKakaoUserInfoDto.builder()
+                .kakaoId(kakaoLoginEntity.getKakaoId())
+                .profile_image(kakaoLoginEntity.getProfile_image())
+                .kakaoName(kakaoLoginEntity.getKakaoName())
+                .email(kakaoLoginEntity.getEmail())
+                .build();
+
         // 새로운 토큰 생성
-        Token newCreatedToken = authTokenProvider.createToken(kakaoLoginEntity.getKakaoId(), kakaoToken);
+        Token newCreatedToken = authTokenProvider.createToken(kakaoLoginEntity.getKakaoId(), reissueKakaoUserInfoDto);
 
         // 리프레시 토큰을 업데이트하고 db저장
         RefreshToken updateRefreshToken = refreshToken.updateToken(newCreatedToken.getRefreshToken());
         jwtRepository.save(updateRefreshToken);
-        String kakaoId = authTokenProvider.getUserPk(tokenRequestDto.getAccessToken());
-        KakaoLoginEntity kakaoLoginEntity1 = kakaoRepository.findById(Long.valueOf(kakaoId)).get();
-        ReissueKakaoUserInfoDto reissueKakaoUserInfoDto = ReissueKakaoUserInfoDto.builder()
+        KakaoLoginEntity kakaoLoginEntity1 = kakaoRepository.findById(kakaoLoginEntity.getKakaoId()).get();
+        ReissueKakaoUserInfoDto reissueKakaoUserInfoDto1 = ReissueKakaoUserInfoDto.builder()
                 .kakaoId(kakaoLoginEntity1.getKakaoId())
                 .email(kakaoLoginEntity1.getEmail())
                 .kakaoName(kakaoLoginEntity1.getKakaoName())
@@ -362,7 +360,7 @@ public class KakaoLoginService {
                 .build();
         TokenReissueKakaoUserInfoDto tokenReissueKakaoUserInfoDto = TokenReissueKakaoUserInfoDto.builder()
                 .token(newCreatedToken)
-                .kakaoUserInfoDto(reissueKakaoUserInfoDto)
+                .kakaoUserInfoDto(reissueKakaoUserInfoDto1)
                 .build();
         Authentication currentAuthentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -373,9 +371,17 @@ public class KakaoLoginService {
             SecurityContextHolder.getContext().setAuthentication(expiredAuthentication);
         }
 
+        ResponseCookie cookie = ResponseCookie.from("refreshToken" , newCreatedToken.getRefreshToken())
+                .maxAge(7*24 * 60 * 60)
+                .path("/")
+                .secure(true)
+                .sameSite("None")
+                .httpOnly(true)
+                .build();
+
 
         // 새로 생성된 토큰 반환
-        return ResponseEntity.status(200).body(tokenReissueKakaoUserInfoDto);
+        return ResponseEntity.status(200).header(HttpHeaders.SET_COOKIE,cookie.toString()).body(tokenReissueKakaoUserInfoDto);
     }
 
 }

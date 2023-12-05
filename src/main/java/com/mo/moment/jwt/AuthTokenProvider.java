@@ -1,6 +1,8 @@
 package com.mo.moment.jwt;
 
 import com.mo.moment.dto.kakaoDto.KakaoTokenSaveDto;
+import com.mo.moment.dto.kakaoDto.ReissueKakaoUserInfoDto;
+import com.mo.moment.jwt.dto.GuestToken;
 import com.mo.moment.jwt.dto.Token;
 import com.mo.moment.service.kakaoService.CustomUserDetailsService;
 import io.jsonwebtoken.*;
@@ -9,12 +11,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 
@@ -24,6 +30,8 @@ import java.util.LinkedHashMap;
 @RequiredArgsConstructor
 public class AuthTokenProvider {
     private final CustomUserDetailsService customUserDetailsService;
+    public static final String loginAccessToken = "X-AUTH-TOKEN";
+
 
     // 액세스토큰 만료 시간
     @Value("${app.auth.tokenExpiry}")
@@ -44,9 +52,9 @@ public class AuthTokenProvider {
     }
 
     //토큰 생성 , id와 역할정보를 이용하여 토큰 생성
-    public Token createToken(Long userPk, KakaoTokenSaveDto roles){
+    public Token createToken(Long userPk, ReissueKakaoUserInfoDto roles){
         Claims claims = Jwts.claims().setSubject(String.valueOf(userPk));
-        claims.put(ROLES,roles);
+        claims.put(ROLES,"USER");
 
         Date now = new Date();
 
@@ -78,7 +86,12 @@ public class AuthTokenProvider {
     public Authentication getAuthentication(String token){
 
         Claims claims = parseClaims(token);
-        UserDetails userDetails = customUserDetailsService.loadUserByUsername(claims.getSubject());
+        String role = (String)claims.get(ROLES);
+        GrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
+
+//        UserDetails userDetails = customUserDetailsService.loadUserByUsername(claims.getSubject());
+        UserDetails userDetails = new User(claims.getSubject(),"", Collections.singletonList(authority));
+
         return new UsernamePasswordAuthenticationToken(userDetails, "",userDetails.getAuthorities());
     }
 
@@ -115,7 +128,7 @@ public class AuthTokenProvider {
 
     //HTTP요청으로부터 토큰을 가져오는 메서드
     public String resolveToken(HttpServletRequest request){
-        return request.getHeader("X-AUTH-TOKEN");
+        return request.getHeader(loginAccessToken);
     }
 
     //토큰이 유효한지 검사
@@ -126,6 +139,28 @@ public class AuthTokenProvider {
         }catch (Exception e){
             return false;
         }
+    }
+
+    public GuestToken guestTokenCreate(Long userPk){
+        Claims claims = Jwts.claims().setSubject(String.valueOf(userPk));
+        claims.put(ROLES,"GUEST");
+
+        Date now = new Date();
+
+        String accessToken = Jwts.builder()
+                .setHeaderParam(Header.TYPE,Header.JWT_TYPE)
+                .setClaims(claims)
+                .setIssuedAt(now)
+                .setExpiration(new Date(now.getTime() + accessTokenExpiry))
+                .signWith(SignatureAlgorithm.HS256,secretKey)
+                .compact();
+
+
+        return GuestToken.builder()
+                .accessToken(accessToken)
+                .issuedAt(now)
+                .accessTokenExpireDate(new Date(now.getTime() + accessTokenExpiry))
+                .build();
     }
 
 }
