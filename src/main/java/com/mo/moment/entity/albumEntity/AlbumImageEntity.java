@@ -61,6 +61,10 @@ public class AlbumImageEntity {
         this.boardEntity = boardEntity;
     }
 
+    public void setKakaoId(Long kakaoId) {
+        this.kakaoId = kakaoId;
+    }
+
     // 이미지 파일의 확장자를 추출하는 메소드
     public String extractExtension(String originName) {
         int index = originName.lastIndexOf('.');

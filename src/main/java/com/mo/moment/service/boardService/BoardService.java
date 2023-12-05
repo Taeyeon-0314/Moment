@@ -7,6 +7,7 @@ import com.mo.moment.entity.albumEntity.AlbumImageEntity;
 import com.mo.moment.entity.boardEntity.BoardEntity;
 import com.mo.moment.repository.albumImageRepository.AlbumImageRepository;
 import com.mo.moment.repository.boardRepository.BoardRepository;
+import com.mo.moment.repository.kakaoRepository.KakaoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -30,24 +31,25 @@ public class BoardService {
     private final AmazonS3Client amazonS3Client;
 
     private final AlbumImageRepository imageRepository;
+    private final KakaoRepository kakaoRepository;
 
-    public Long saveBoard(String content) {
+    public Long saveBoard(String content, String hostId) {
         BoardEntity boardEntity = BoardEntity.builder()
                 .content(content)
+                .kakaoLoginEntity(kakaoRepository.findById(Long.valueOf(hostId)).get())
                 .build();
-
         return boardRepository.save(boardEntity).getBoardId();
     }
 
     public ResponseEntity<BoardResponseDto> findByBoardIdAndContent(Long boardId) {
         Optional<BoardEntity> optionalBoardEntity = boardRepository.findById(boardId);
-        if(optionalBoardEntity.isPresent()){
+        if (optionalBoardEntity.isPresent()) {
             BoardEntity boardEntity = optionalBoardEntity.get();
             BoardResponseDto boardDto = BoardResponseDto.builder()
                     .content(boardEntity.getContent())
                     .build();
             return ResponseEntity.status(200).body(boardDto);
-        }else{
+        } else {
             return null;
         }
     }
@@ -55,11 +57,11 @@ public class BoardService {
     public ResponseEntity<Boolean> findByBoardIdAndImageDelete(Long boardId, String kakaoId) {
         List<AlbumImageEntity> imageEntityList = imageRepository.findByBoardEntity_BoardId(boardId);
 
-        for (AlbumImageEntity imageEntity : imageEntityList){
-            if(imageEntity.getKakaoId().equals(Long.valueOf(kakaoId))){
+        for (AlbumImageEntity imageEntity : imageEntityList) {
+            if (imageEntity.getKakaoId().equals(Long.valueOf(kakaoId))) {
                 deleteImageFromS3(imageEntity.getAccessUrl());
                 deleteImageFromS3(imageEntity.getResizeUrl());
-            }else {
+            } else {
                 return ResponseEntity.status(401).body(false);
             }
         }
@@ -67,28 +69,31 @@ public class BoardService {
         return ResponseEntity.status(200).body(true);
     }
 
-    private void deleteImageFromS3(String imageUrl){
+    private void deleteImageFromS3(String imageUrl) {
         String splitStr = ".com/";
         String fileName = imageUrl.substring(imageUrl.lastIndexOf(splitStr) + splitStr.length());
-        amazonS3Client.deleteObject(new DeleteObjectRequest(bucketName , fileName));
+        amazonS3Client.deleteObject(new DeleteObjectRequest(bucketName, fileName));
     }
 
     public ResponseEntity<?> allview(String kakaoId, Pageable pageable) {
-        Page<BoardEntity> boardEntityPage = boardRepository.findByKakaoLoginEntity_KakaoId(Long.valueOf(kakaoId) , pageable);
-        Page<BoardPageRequestDto> boardPageView = boardEntityPage.map(boardEntity ->{
-            if(boardEntity.getContent() == null){
-                return BoardPageRequestDto.builder()
-                        .board_id(boardEntity.getBoardId())
-                        .content("내용이 없습니다.")
-                        .dateTime(boardEntity.getCreatedDate())
+        Page<BoardEntity> boardEntityPage = boardRepository.findByKakaoLoginEntity_KakaoId(Long.valueOf(kakaoId), pageable);
+        Page<BoardPageRequestDto> boardPageView = boardEntityPage.map(boardEntity -> {
+            List<BoardImageViewDto> boardImageViewDtoList = new ArrayList<>();
+            for (AlbumImageEntity albumImageEntity : boardEntity.getImageEntities()) {
+                BoardImageViewDto boardImageViewDto = BoardImageViewDto.builder()
+                        .imageId(albumImageEntity.getId())
+                        .originName(albumImageEntity.getOriginName())
+                        .metaDateTime(albumImageEntity.getMetaDateTime())
+                        .accessUrl(albumImageEntity.getAccessUrl())
                         .build();
-            }else{
-                return BoardPageRequestDto.builder()
-                        .board_id(boardEntity.getBoardId())
-                        .content(boardEntity.getContent())
-                        .dateTime(boardEntity.getCreatedDate())
-                        .build();
+                boardImageViewDtoList.add(boardImageViewDto);
             }
+            return BoardPageRequestDto.builder()
+                    .board_id(boardEntity.getBoardId())
+                    .content(boardEntity.getContent())
+                    .dateTime(boardEntity.getMetaDateTime())
+                    .boardImageViewDtoList(boardImageViewDtoList)
+                    .build();
         });
         BoardViewPageDto pageResponse = new BoardViewPageDto();
         pageResponse.setPageNumber(boardPageView.getNumber());
@@ -101,18 +106,18 @@ public class BoardService {
 
     public ResponseEntity<?> boardImageView(String kakaoId, Long boardId) {
         Optional<BoardEntity> boardEntityOptional = boardRepository.findById(boardId);
-        if(boardEntityOptional.isPresent()){
+        if (boardEntityOptional.isPresent()) {
             BoardEntity boardEntity = boardEntityOptional.get();
-            if(boardEntity.getKakaoLoginEntity().getKakaoId().equals(Long.valueOf(kakaoId))){
+            if (boardEntity.getKakaoLoginEntity().getKakaoId().equals(Long.valueOf(kakaoId))) {
                 List<BoardImageViewDto> boardImageViewDtoList = new ArrayList<>();
-                for (AlbumImageEntity albumImageEntity: boardEntity.getImageEntities()) {
+                for (AlbumImageEntity albumImageEntity : boardEntity.getImageEntities()) {
                     BoardImageViewDto boardImageViewDto = BoardImageViewDto.builder()
                             .imageId(albumImageEntity.getId())
                             .originName(albumImageEntity.getOriginName())
                             .metaDateTime(albumImageEntity.getMetaDateTime())
                             .accessUrl(albumImageEntity.getAccessUrl())
                             .build();
-                            boardImageViewDtoList.add(boardImageViewDto);
+                    boardImageViewDtoList.add(boardImageViewDto);
                 }
                 BoardDetailViewDto boardDetailViewDto = BoardDetailViewDto.builder()
                         .boardId(boardEntity.getBoardId())
@@ -120,11 +125,19 @@ public class BoardService {
                         .accessUrl(boardImageViewDtoList)
                         .build();
                 return ResponseEntity.status(200).body(boardDetailViewDto);
-            }else{
+            } else {
                 return ResponseEntity.status(403).body("권한없음");
             }
-        }else {
+        } else {
             return ResponseEntity.status(401).body("게시판없음");
         }
+    }
+
+    public void boardMetadateSave(Long boardId) {
+        List<AlbumImageEntity> albumImageEntity = imageRepository.findByBoardEntity_BoardIdOrderByMetaDateTime(boardId);
+        Optional<BoardEntity> boardEntity = boardRepository.findById(boardId);
+        BoardEntity boardEntity1 = boardEntity.get();
+        boardEntity1.setMetaDateTime(albumImageEntity.get(0).getMetaDateTime());
+        boardRepository.save(boardEntity1);
     }
 }

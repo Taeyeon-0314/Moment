@@ -11,4 +11,8 @@ public interface AlbumImageRepository extends JpaRepository<AlbumImageEntity,Lon
     Page<AlbumImageEntity> findByKakaoId(Long kakaoId , Pageable pageable);
 
     List<AlbumImageEntity> findByBoardEntity_BoardId(Long boardId);
+
+    Long countAlbumImageEntityByKakaoId(Long kakaoId);
+
+    List<AlbumImageEntity> findByBoardEntity_BoardIdOrderByMetaDateTime(Long boardId);
 }

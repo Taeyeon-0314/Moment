@@ -6,14 +6,16 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
 public class AlbumImageDto {
-    private List<MultipartFile> images = new ArrayList<>();
     private String content;
+    private MultipartFile image1;
+    private MultipartFile image2;
+    private MultipartFile image3;
+    private MultipartFile image4;
+    private MultipartFile image5;
+
 }

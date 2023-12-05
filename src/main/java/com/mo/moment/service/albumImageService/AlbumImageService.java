@@ -7,7 +7,6 @@ import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
-import com.mo.moment.dto.albumImageDto.AlbumImageDto;
 import com.mo.moment.dto.albumImageDto.AlbumImageViewPageDto;
 import com.mo.moment.dto.albumImageDto.AlbumImageViewRequestDto;
 import com.mo.moment.entity.albumEntity.AlbumImageEntity;
@@ -48,21 +47,21 @@ public class AlbumImageService {
 
     // 여러 이미지를 저장하고 그 결과 URL을 반환하는 메서드
     @Transactional
-    public ResponseEntity<?> saveImages(AlbumImageDto albumImageDto, Long boardId) {
+    public ResponseEntity<?> saveImages(List<MultipartFile> imagesFile, Long boardId , String hostId) {
         List<String> resultList = new ArrayList<>();
 
         // 전달된 MultipartFile 리스트에서 각 이미지를 저장하고 URL을 리스트에 추가
-        for (MultipartFile multipartFile : albumImageDto.getImages()) {
-            String value = saveImage(multipartFile , boardId);
+        for (MultipartFile multipartFile : imagesFile) {
+            String value = saveImage(multipartFile , boardId,hostId);
             resultList.add(value);
         }
-
+        resultList.add(boardRepository.findById(boardId).get().getContent());
         return ResponseEntity.status(200).body(resultList);
     }
 
     // 이미지를 저장하고 저장된 이미지의 URL을 반환하는 메서드
     @Transactional
-    public String saveImage(MultipartFile multipartFile,Long boardId) {
+    public String saveImage(MultipartFile multipartFile,Long boardId, String hostId) {
 
         // 업로드된 파일의 원래 이름을 가져옴
         String originalName = multipartFile.getOriginalFilename();
@@ -106,6 +105,7 @@ public class AlbumImageService {
                     image.setResizeUrl(resizeUrl);
                     BoardEntity boardEntity = boardRepository.findById(boardId).get();
                     image.setBoardEntity(boardEntity);
+                    image.setKakaoId(Long.valueOf(hostId));
                     imageRepository.save(image);
 
                     //로컬 리사이징 이미지 파일 삭제
@@ -135,6 +135,7 @@ public class AlbumImageService {
 
                     BoardEntity boardEntity = boardRepository.findById(boardId).get();
                     image.setBoardEntity(boardEntity);
+                    image.setKakaoId(Long.valueOf(hostId));
                     // AlbumImage 엔티티를 저장
                     imageRepository.save(image);
 
