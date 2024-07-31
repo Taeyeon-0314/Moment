@@ -49,9 +49,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 // HttpServletRequest에 따라 접근제한
                 .authorizeRequests()
                 // 여기있는 모든 경로는 인증 없이 접근이 가능
-                .antMatchers("/login*/**", "/reissue*/**","/","/login/").permitAll()
+                .antMatchers("/login*/**", "/reissue**","/","/login/" , "/guest/host**").permitAll()
                 // /exception/** GET요청은 인증없이 접근 가능
                 .antMatchers(HttpMethod.GET, "/exception/**").permitAll()
+                .antMatchers("/guest/image**").hasRole("GUEST")
                 // 그 외의 모든 요청은 user역할을 가진 사용자만 접근 가능
                 .anyRequest().hasRole("USER")
                 .and()
@@ -71,7 +72,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         CorsConfiguration configuration = new CorsConfiguration();
         // 허용할 오리진(도메인)을 설정합니다.
         configuration.addAllowedOrigin("https://localhost:3000");
+        configuration.addAllowedOrigin("http://localhost:3000");
         configuration.addAllowedOrigin("http://localhost:8080");
+        configuration.addAllowedOrigin("http://www.moment.r-e.kr");
         configuration.addAllowedOrigin("https://www.moment.r-e.kr");
         // 허용할 HTTP 메서드를 설정합니다.
         configuration.addAllowedMethod("GET");

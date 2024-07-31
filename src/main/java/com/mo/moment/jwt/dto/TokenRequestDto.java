@@ -11,14 +11,16 @@ import java.util.Date;
 @Setter
 @NoArgsConstructor
 public class TokenRequestDto {
-    String accessToken;
-    String refreshToken;
+    private String accessToken;
+    private String refreshToken;
+    private Date issuedAt;
     private Date accessTokenExpireDate;
 
     @Builder
-    public TokenRequestDto(String accessToken, String refreshToken, Date accessTokenExpireDate){
+    public TokenRequestDto(String accessToken,String refreshToken,  Date accessTokenExpireDate , Date issuedAt){
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
+        this.issuedAt = issuedAt;
         this.accessTokenExpireDate = accessTokenExpireDate;
     }
 }
